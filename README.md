@@ -40,44 +40,34 @@ If you decide to use this software for your research, please cite <i>WhyCon</i> 
 
 #### Prepare prerequisities
 
-1 Make sure your system is up to date: <b>sudo apt-get update</b>.
-1. Install the required <a href="#dependencies">libraries</a>.: <b>sudo apt-get install libsdl1.2-dev libsdl-ttf2.0-dev libncurses5-dev</b>.
-1. Install git, guvcview etc <b>sudo apt install git guvcview</b>.
-1. Run <b>guvcview</b> and check if you see your camera feed, adjust your camera settings (exposure, brightness etc) and check the available resolutions.
+1. Install ROS 2 (Humble or newer) and source it, e.g. <b>source /opt/ros/humble/setup.bash</b>. Only <i>rclcpp</i>, <i>sensor_msgs</i>, <i>geometry_msgs</i> and <i>std_srvs</i> are used.
+1. Install git and cmake <b>sudo apt install git cmake build-essential</b>.
+1. Start a ROS 2 camera driver that publishes <b>mono8</b> images and check the topic with <b>ros2 topic hz /camera/image_raw</b>.
 
 #### Compile, run and test
 
 1. Download the software from GitHub <b>git clone https://github.com/gestom/whycon-orig.git</b> and go to the <b>src</b> directory.
-1. Adjust the camera resolution in the <i>main/whycon.cpp</i>.
-1. Compile the software - just type <b>make</b>.
+1. Adjust the camera resolution in the <i>main/whycon.cpp</i> - images of a different size are ignored.
+1. Compile the software with plain cmake (in a shell where ROS 2 is sourced): <b>mkdir build && cd build && cmake .. && make</b>. The binary is placed in the <b>bin</b> directory.
 1. Download, resize and print one circular <a href="etc/test.pdf">pattern</a> - you have the pattern also in the <b>whycon-orig/etc/test.pdf</b> file.
-1. Try a test run - you need to run the binary in the <b>bin</b> directory. Type <b>../bin/whycon /dev/videoX 1</b>, where X is the number of the camera and 1 tells the system to track one pattern.</li> 
-1. You should see the image with some numbers below the circle. Pressing <b>D</b> shows the segmentation result.
-1. At this point, you can also change camera brightness, exposure, contrast by pressing <i>(SHIFT) b, e, c</i> respectively. These settings are stored in <i>etc/camera.cfg</i> and reloaded on restart.
-1. Open your browser to view localhost:6666. You should see the circle position.
+1. Try a test run - you need to run the binary in the <b>bin</b> directory. Type <b>./whycon /camera/image_raw 1</b>, where /camera/image_raw is the mono8 image topic and 1 tells the system to track one pattern.
+1. The positions are published as <i>geometry_msgs/PoseArray</i> on the <b>whycon/markers</b> topic (<b>ros2 topic echo /whycon/markers</b>).
 
 #### Setting up the coordinate system
 
 1. Calibrate your camera using the MATLAB (or Octave) calibration toolbox and put the <b>Calib_Results.m</b> in the <b>etc</b> directory.
 1. If you have resized the markers (their default size is 122mm), then adjust their diameter in the <b>main/whycon.cpp</b> file.
 1. Print additional four circular <a href="etc/test.pdf">markers</a> and place to the corners of your (reclangular) operational space.
-1. Modify the dimensions of the operation space in the <b>main/whycon.cpp</b> and call <b>make</b> to recompile - the system will now assume that the four markers are at positions [0,0],[fieldLength,0], [0,fieldWidth],[fieldLength,fieldWidth]. 
+1. Modify the dimensions of the operation space in the <b>main/whycon.cpp</b> and recompile - the system will now assume that the four markers are at positions [0,0],[fieldLength,0], [0,fieldWidth],[fieldLength,fieldWidth].
 1. Position and fixate your camera so that it has all four circles in it's field of view.
-1. Go to <b>bin</b> directory and run  <b>./whycon /dev/videoX Y</b>, where X is the number of your camera and Y is the number of patterns you want to track, i.e. Y=NxM+4.
-1. Once all the patterns are found, press <b>a</b> and the four outermost patterns will be used to calculate the coordinate system.
-1. Alternatively, you can press <b>r</b> and then click the four circles that define the coordinate system.
-1. Pressing 1 should show you the patterns' positions in camera-centric coordinates (x-axis equals to camera optical axis), pressing 2 and 3 will display marker coordinates in user-defined 2D or 3D coordinate systems.
-1. Pressing <b>+</b>,<b>-</b> changes the number of localized patterns.
+1. Go to <b>bin</b> directory and run  <b>./whycon /camera/image_raw Y</b>, where Y is the number of patterns you want to track, i.e. Y=NxM+4.
+1. Once all the patterns are found, call the autocalibration service <b>ros2 service call /whycon/autocalibrate std_srvs/srv/Trigger</b> and the four outermost patterns will be used to calculate the coordinate system. It is saved to <b>etc/default.cal</b> and loaded on restart.
 
-#### To postprocess the stored videos
+#### To postprocess recorded data
 
 1. To create a log of the robot positions, simply create an <b>output</b> folder at the directory where you run the <b>whycon</b>.
-2. If your camera supports the MJPEG format, then the system will create a video in the <b>output</b> folder as well.
-3. If your camera does not support MJPEG, <b>whycon</b> will save the video feed as a serie of bitmaps, that you can process later as well.
-4. You can run <b>whycon video_file_name Y</b> to process that video in the same way as when using the camera, i.e. <b>video_file_name</b> instead of <b>/dev/videoX</b>.
-5. Processing a saved video rather than the camera feed is likely to provide more precise results.
-6. Running the system with a <b>nogui</b> argument e.g. <b>./whycon /dev/video0 1 nogui</b> causes text-only output - this can speed-up postprocessing.
-7. Logs and videos might be large - to prevent saving logs and videos, run the system with <b>nolog</b> or <b>novideo</b> argument.
+1. Record the image topic with <b>ros2 bag record</b> and play it back with <b>ros2 bag play</b> while <b>whycon</b> runs.
+1. Logs might be large - to prevent saving logs, run the system with <b>nolog</b> argument, e.g. <b>./whycon /camera/image_raw 1 nolog</b>.
 
 #### Some additional remarks
 
@@ -91,12 +81,8 @@ If you decide to use this software for your research, please cite <i>WhyCon</i> 
 
 ### Dependencies
 
-All the following libraries are probably in your packages.
-
-1. <b>libsdl1.2-dev</b> for graphical user interface.
-2. <b>libsdl-ttf2.0-dev</b> to print stuff in the GUI.
-3. <b>libncurses5-dev</b> to print stuff on the terminal.
-4. <b>guvcview</b> to set-up the camera.
+1. <b>ROS 2</b> (<i>rclcpp</i>, <i>sensor_msgs</i>, <i>geometry_msgs</i>, <i>std_srvs</i>) for the image input and position output.
+2. <b>cmake</b> to build the software.
 
 ### References
 1. J. Ulrich, A. Alsayed et al.: **[Towards fast fiducial marker with full 6 DOF pose estimation](https://dl.acm.org/doi/abs/10.1145/3477314.3507043)**. Symposium on Applied Computing, 2022. [[bibtex](https://gist.github.com/jiriUlr/7d333e90c43e6b41c79e5150c7a59267)].

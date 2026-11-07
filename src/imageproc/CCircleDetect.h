@@ -69,8 +69,8 @@ class CCircleDetect
 		//change threshold if circle not detected, see 3.2 of [1]
 		bool changeThreshold();
 
-		//flags to draw results - used for debugging
-		bool draw,drawAll,lastTrackOK;
+		//was the pattern detected in the previous step ?
+		bool lastTrackOK;
 
 		//debug level
 		int debug;
@@ -102,9 +102,8 @@ class CCircleDetect
 		SSegment outer;
 		float outerAreaRatio,innerAreaRatio,areasRatio;
 		int queueStart,queueEnd,queueOldStart,numSegments;
-		int width,height,len,siz;
+		int width,height,len;
 		int expand[4];
-		unsigned char *ptr;
 		CTimer timer;
 		int tima,timb,timc,timd,sizer,sizerAll;
 		float diameterRatio;

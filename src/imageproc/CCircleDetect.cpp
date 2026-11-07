@@ -26,12 +26,10 @@ CCircleDetect::CCircleDetect(int wi,int he,int idi)
 	enableCorrections = true;			//enables brightness compensation, see 3.5 of [1]
 	lastTrackOK = false;				//was the pattern detected in the previous step ? used to initiate the search position
 	debug = 0;					//debug level 
-	draw = false; 					//draw the detected segments in bright colors to indicate segmentation results
-	drawAll = true;					//draw all segmentation results - used for debugging
 	maxFailed = 0;					//used to decide when to start changing the threshold 
 	minSize = 15;					//minimal pattern size in pixels
 	thresholdStep = 256;				//related to thresholding in case of unsuccessful detections, see 3.2 of [1]
-	maxThreshold = 3*256;				//related to thresholding in case of unsuccessful detections, see 3.2 of [1]
+	maxThreshold = 256;				//related to thresholding in case of unsuccessful detections, see 3.2 of [1]
 	centerDistanceToleranceRatio = 0.1;		//max allowd distance of the inner and outer circle centers (relative to pattern dimensions)
 	centerDistanceToleranceAbs = 15;		//max allowed distance of the inner and outer circle centers (in pixels)
 	circularTolerance = 1.5;			//maximal tolerance of bounding box dimensions vs expected pixel area - see equation 2 of the paper [1] 
@@ -46,7 +44,6 @@ CCircleDetect::CCircleDetect(int wi,int he,int idi)
 	width = wi;
 	height = he;
 	len = width*height;
-	siz = len*3;
 	ownBuffer = false;
 	if (buffer == NULL){
 		ownBuffer = true;
@@ -87,8 +84,8 @@ bool CCircleDetect::changeThreshold()
 		div*=2;
 	}
 	int step = 256/div;
-	threshold = 3*(step*(numFailed-div)+step/2);
-	if (debug > 5) fprintf(stdout,"Threshold: %i %i %i\n",div,numFailed,threshold/3);
+	threshold = step*(numFailed-div)+step/2;
+	if (debug > 5) fprintf(stdout,"Threshold: %i %i %i\n",div,numFailed,threshold);
 	return step > 8;
 }
 
@@ -120,8 +117,7 @@ bool CCircleDetect::examineSegment(CRawImage *image,SSegment *segmen,int ii,floa
 		//search neighbours
 		pos = position+1;
 		if (buffer[pos] == 0){
-			 ptr = &image->data[pos*3];
-			 buffer[pos]=((ptr[0]+ptr[1]+ptr[2]) > threshold)-2;
+			 buffer[pos]=(image->data[pos] > threshold)-2;
 		}
 		if (buffer[pos] == type){
 			queue[queueEnd++] = pos;
@@ -130,8 +126,7 @@ bool CCircleDetect::examineSegment(CRawImage *image,SSegment *segmen,int ii,floa
 		}
 		pos = position-1;
 		if (buffer[pos] == 0){
-			 ptr = &image->data[pos*3];
-			 buffer[pos]=((ptr[0]+ptr[1]+ptr[2]) > threshold)-2;
+			 buffer[pos]=(image->data[pos] > threshold)-2;
 		}
 		if (buffer[pos] == type){
 			queue[queueEnd++] = pos;
@@ -140,8 +135,7 @@ bool CCircleDetect::examineSegment(CRawImage *image,SSegment *segmen,int ii,floa
 		}
 		pos = position-width;
 		if (buffer[pos] == 0){
-			 ptr = &image->data[pos*3];
-			 buffer[pos]=((ptr[0]+ptr[1]+ptr[2]) > threshold)-2;
+			 buffer[pos]=(image->data[pos] > threshold)-2;
 		}
 		if (buffer[pos] == type){
 			queue[queueEnd++] = pos;
@@ -150,8 +144,7 @@ bool CCircleDetect::examineSegment(CRawImage *image,SSegment *segmen,int ii,floa
 		}
 		pos = position+width;
 		if (buffer[pos] == 0){
-			 ptr = &image->data[pos*3];
-			 buffer[pos]=((ptr[0]+ptr[1]+ptr[2]) > threshold)-2;
+			 buffer[pos]=(image->data[pos] > threshold)-2;
 		}
 		if (buffer[pos] == type){
 			queue[queueEnd++] = pos;
@@ -182,7 +175,7 @@ bool CCircleDetect::examineSegment(CRawImage *image,SSegment *segmen,int ii,floa
 			segmen->mean = 0;
 			for (int p = queueOldStart;p<queueEnd;p++){
 				pos = queue[p];
-				segmen->mean += image->data[pos*3]+image->data[pos*3+1]+image->data[pos*3+2];
+				segmen->mean += image->data[pos];
 			}
 			segmen->mean = segmen->mean/segmen->size;
 			result = true;	
@@ -314,9 +307,7 @@ SSegment CCircleDetect::findSegment(CRawImage* image, SSegment init)
 	while (cont) 
 	{
 		if (buffer[ii] == 0){
-			ptr = &image->data[ii*3];
-			//buffer[ii]=((ptr[0]+ptr[1]+ptr[2]) > threshold)-2;
-			if ((ptr[0]+ptr[1]+ptr[2]) < threshold) buffer[ii] = -2;
+			if (image->data[ii] < threshold) buffer[ii] = -2;
 		}
 		if (buffer[ii] == -2){
 			//new segment found
@@ -326,8 +317,7 @@ SSegment CCircleDetect::findSegment(CRawImage* image, SSegment init)
 			if (examineSegment(image,&outer,ii,outerAreaRatio)){
 				pos = outer.y*image->width+outer.x;
 				if (buffer[pos] == 0){
-					ptr = &image->data[pos*3];
-					buffer[pos]=((ptr[0]+ptr[1]+ptr[2]) >= threshold)-2;
+					buffer[pos]=(image->data[pos] >= threshold)-2;
 				}	
 				if (buffer[pos] == -1){
 					if (examineSegment(image,&inner,pos,innerAreaRatio)){
@@ -451,7 +441,7 @@ SSegment CCircleDetect::findSegment(CRawImage* image, SSegment init)
 				}else{
 					if (track && init.valid){
 						ii = start -1;
-						if (debug>0) printf("Inner segment not white %i %i %i\n",threshold,ptr[0]+ptr[1]+ptr[2],outer.size);
+						if (debug>0) printf("Inner segment not white %i %i %i\n",threshold,image->data[pos],outer.size);
 					}
 				}
 			}else{
@@ -481,40 +471,17 @@ SSegment CCircleDetect::findSegment(CRawImage* image, SSegment init)
 	//threshold management
 	if (outer.valid){
 		lastThreshold = threshold;
-		drawAll = false;
 		numFailed = 0;	
 	}else if (numFailed < maxFailed){
 		if (numFailed++%2 == 0) changeThreshold(); else threshold = lastThreshold;
-		if (debug > 5) drawAll = true;
 	}else{
 		numFailed++;
 		if (changeThreshold()==false) numFailed = 0;
-		if (debug > 5) drawAll = true;
 	}
 
-	//Drawing results 
+	//blank the inner (white) part of the detected pattern so that the next detector does not find the same pattern again
 	if (outer.valid){
-		for (int p =  queueOldStart;p< queueEnd;p++)
-		{
-			pos = queue[p];	
-			image->data[3*pos+0] = 	image->data[3*pos+1] = 	image->data[3*pos+2] = 0;
-		}
-	}
-	if (draw){
-		if (init.valid || track || lastTrackOK){
-			for (int p = queueOldStart;p<queueEnd;p++){
-				pos = queue[p];	
-				image->data[3*pos+0] = 0;
-				image->data[3*pos+1] = 255;
-				image->data[3*pos+2] = 255;
-			}
-			for (int p = 0;p<queueOldStart;p++){
-				pos = queue[p];	
-				image->data[3*pos+0] = 255;
-				image->data[3*pos+1] = 0;
-				image->data[3*pos+2] = 255;
-			}
-		}
+		for (int p = queueOldStart;p<queueEnd;p++) image->data[queue[p]] = 0;
 	}
 	bufferCleanup(outer);
 	return outer;
