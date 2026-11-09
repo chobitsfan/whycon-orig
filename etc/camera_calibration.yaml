@@ -3,19 +3,18 @@
 # Camera intrinsics in OpenCV format (cv::calibrateCamera / cv::FileStorage).
 # The ROS 2 camera_calibration output (ost.yaml) can be used here as well.
 # Values converted from the previous MATLAB Calib_Results.m.
-image_width: 960
-image_height: 720
+image_width: 640
+image_height: 400
 camera_matrix: !!opencv-matrix
    rows: 3
    cols: 3
    dt: d
-   data: [ 797.347102005416332, 0., 491.846653790975836,
-           0., 791.754369147933517, 356.337459613377916,
+   data: [5.2678941902937572e+02, 0., 3.0428358158327001e+02,
+           0., 5.2678941902937572e+02, 1.9906061874036038e+02,
            0., 0., 1. ]
 # k1, k2, p1, p2, k3
 distortion_coefficients: !!opencv-matrix
    rows: 1
    cols: 5
    dt: d
-   data: [ 0.058963524719130, -0.156851906268213, 0.001307777114088,
-           0.001560428850426, 0.000000000000000 ]
+   data: [-6.0648429362528183e-03, -2.0766798914334632e-02, -7.5854620615170771e-04, -3.3352449460589544e-04, 0]

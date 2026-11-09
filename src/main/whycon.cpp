@@ -18,10 +18,10 @@
 
 //Adjust camera resolution here
 int  imageWidth= 640;
-int  imageHeight = 480;
+int  imageHeight = 400;
 
 //Adjust the black circle diameter [m]
-float circleDiameter = 0.122;
+float circleDiameter = 0.037;
 
 /*Adjust the X and Y dimensions of the coordinate system*/
 float fieldLength = 1.00;
