@@ -1,6 +1,12 @@
 #include "CTransformation.h"
 #include <stdio.h>
-#include "sysmat.h" 
+#include "sysmat.h"
+#include <stdlib.h>
+#include <string.h>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <sstream>
 
 /*
  * File name: CTransformation.h
@@ -18,51 +24,75 @@ int sortByDistance(const void* m1,const void* m2)
         return 0;
 }
 
+/*reads the numbers in the 'data: [ ... ]' list that follows 'key:' in a YAML file*/
+static bool readYamlMatrix(const std::string &text,const char *key,std::vector<double> &out)
+{
+	out.clear();
+	std::string k = std::string(key)+":";
+	size_t pos = text.find(k);
+	if (pos == std::string::npos) return false;
+	pos = text.find("data",pos+k.size());
+	if (pos == std::string::npos) return false;
+	size_t start = text.find('[',pos);
+	size_t end = text.find(']',start);
+	if (start == std::string::npos || end == std::string::npos) return false;
+	const char *p = text.c_str()+start+1;
+	const char *e = text.c_str()+end;
+	while (p < e){
+		char *next;
+		double v = strtod(p,&next);
+		if (next == p){p++;continue;}	//skip commas, spaces and newlines
+		out.push_back(v);
+		p = next;
+	}
+	return !out.empty();
+}
+
+/*loads the camera intrinsics from an OpenCV calibration file (cv::FileStorage YAML or ROS camera_calibration YAML)
+  camera_matrix = [fx 0 cx; 0 fy cy; 0 0 1], distortion_coefficients = [k1 k2 p1 p2 k3 ...]*/
+bool CTransformation::loadCameraCalibration(const char *fileName)
+{
+	fc[0] = fc[1] = 1;
+	cc[0] = cc[1] = 0;
+	for (int i = 0;i<6;i++) kc[i] = kcerr[i] = 0;
+	fcerr[0] = fcerr[1] = 0;
+
+	std::ifstream file(fileName);
+	if (!file.is_open()){
+		fprintf(stderr,"Transformation: cannot open camera calibration file %s.\n",fileName);
+		return false;
+	}
+	std::stringstream buffer;
+	buffer << file.rdbuf();
+	std::string text = buffer.str();
+
+	std::vector<double> data;
+	if (readYamlMatrix(text,"camera_matrix",data) && data.size() == 9){
+		fc[0] = data[0];
+		fc[1] = data[4];
+		cc[0] = data[2];
+		cc[1] = data[5];
+	}else{
+		fprintf(stderr,"Transformation: camera_matrix (3x3) not found in %s.\n",fileName);
+		return false;
+	}
+	if (readYamlMatrix(text,"distortion_coefficients",data) && data.size() >= 4){
+		if (data.size() > 5) fprintf(stderr,"Transformation: only the first 5 distortion coefficients (k1,k2,p1,p2,k3) are used.\n");
+		for (size_t i = 0;i<data.size() && i<5;i++) kc[i+1] = data[i];
+	}else{
+		fprintf(stderr,"Transformation: distortion_coefficients not found in %s, assuming no distortion.\n",fileName);
+	}
+	return true;
+}
+
 CTransformation::CTransformation(int widthi,int heighti,float diam,bool fullUnbarreli)
 {
 	transformType = TRANSFORM_NONE;
 	fullUnbarrel = fullUnbarreli;
 	width = widthi;
 	height = heighti;
-	char dummy[1000];
-	FILE* file = fopen("../etc/Calib_Results.m","r");
 	trackedObjectDiameter = diam;
-	while (feof(file)== false){
-		int err = fscanf(file,"%s",dummy);
-		if (strcmp(dummy,"fc") == 0){
-			for (int j = 0;j<10;j++){
-				if (fscanf(file,"%s\n",dummy)!=1) fprintf(stderr,"Transformation: error reading camera calibration file, %i.\n",err);
-				if (j==2) fc[0] = atof(dummy);
-				if (j==4) fc[1] = atof(dummy);
-			}
-		}
-		if (strcmp(dummy,"cc") == 0){
-			for (int j = 0;j<10;j++){
-				if(fscanf(file,"%s\n",dummy)!=1) fprintf(stderr,"Transformation: error reading camera calibration file.\n");
-				if (j==2) cc[0] = atof(dummy);
-				if (j==4) cc[1] = atof(dummy);
-			}
-		}
-		if (strcmp(dummy,"kc") == 0){
-			for (int j = 0;j<12;j++){
-				if(fscanf(file,"%s\n",dummy)!=1) fprintf(stderr,"Transformation: error reading camera calibration file.\n");
-				if (j>1 && j%2 == 0) kc[j/2] = atof(dummy);
-			}
-		}
-		if (strcmp(dummy,"kc_error") == 0){
-			for (int j = 0;j<12;j++){
-				if(fscanf(file,"%s\n",dummy)!=1) fprintf(stderr,"Transformation: error reading camera calibration file.\n");
-				if (j>1 && j%2 == 0) kcerr[j/2] = atof(dummy);
-			}
-		}
-		if (strcmp(dummy,"fc_error") == 0){
-			for (int j = 0;j<10;j++){
-				if (fscanf(file,"%s\n",dummy)!=1) fprintf(stderr,"Transformation: error reading camera calibration file, %i.\n",err);
-				if (j==2) fcerr[0] = atof(dummy);
-				if (j==4) fcerr[1] = atof(dummy);
-			}
-		}
-	}
+	loadCameraCalibration(CAMERA_CALIBRATION_FILE);
 	kc[0] = 1.0;
 	for (int i = 0;i<6;i++) printf("%05f,",kc[i]);
 	printf("\n");

@@ -33,6 +33,6 @@ target_link_libraries(whycon
   ${std_srvs_TARGETS}
 )
 
-# the program expects to be run from bin/ (it reads ../etc/Calib_Results.m)
+# the program expects to be run from bin/ (it reads ../etc/camera_calibration.yaml)
 set_target_properties(whycon PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../bin)

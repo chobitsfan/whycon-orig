@@ -16,6 +16,9 @@
 #include <unistd.h>
 #include "CCircleDetect.h"
 
+/*camera intrinsics produced by OpenCV calibration (relative to the bin directory)*/
+#define CAMERA_CALIBRATION_FILE "../etc/camera_calibration.yaml"
+
 /*which transform to use*/
 typedef enum{
 	TRANSFORM_NONE,			//camera-centric
@@ -77,6 +80,7 @@ class CTransformation
 		ETransformType transformType;
 		void saveCalibration(const char *str);
 		void loadCalibration(const char *str);
+		bool loadCameraCalibration(const char *fileName);
 		float distance(STrackedObject o1,STrackedObject o2);
 		STrackedObject transformInv(STrackedObject o[]);
 

@@ -55,7 +55,7 @@ If you decide to use this software for your research, please cite <i>WhyCon</i> 
 
 #### Setting up the coordinate system
 
-1. Calibrate your camera using the MATLAB (or Octave) calibration toolbox and put the <b>Calib_Results.m</b> in the <b>etc</b> directory.
+1. Calibrate your camera with OpenCV (e.g. the OpenCV <i>calibration</i> sample or <b>ros2 run camera_calibration cameracalibrator</b>) and save the resulting YAML file (with <i>camera_matrix</i> and <i>distortion_coefficients</i>) as <b>etc/camera_calibration.yaml</b>.
 1. If you have resized the markers (their default size is 122mm), then adjust their diameter in the <b>main/whycon.cpp</b> file.
 1. Print additional four circular <a href="etc/test.pdf">markers</a> and place to the corners of your (reclangular) operational space.
 1. Modify the dimensions of the operation space in the <b>main/whycon.cpp</b> and recompile - the system will now assume that the four markers are at positions [0,0],[fieldLength,0], [0,fieldWidth],[fieldLength,fieldWidth].
