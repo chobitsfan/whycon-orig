@@ -51,7 +51,7 @@ If you decide to use this software for your research, please cite <i>WhyCon</i> 
 1. Compile the software with plain cmake (in a shell where ROS 2 is sourced): <b>mkdir build && cd build && cmake .. && make</b>. The binary is placed in the <b>bin</b> directory.
 1. Download, resize and print one circular <a href="etc/test.pdf">pattern</a> - you have the pattern also in the <b>whycon-orig/etc/test.pdf</b> file.
 1. Try a test run - you need to run the binary in the <b>bin</b> directory. Type <b>./whycon /camera/image_raw 1</b>, where /camera/image_raw is the mono8 image topic and 1 tells the system to track one pattern.
-1. The positions are published as <i>geometry_msgs/PoseArray</i> on the <b>whycon/markers</b> topic (<b>ros2 topic echo /whycon/markers</b>).
+1. The positions are published as <i>geometry_msgs/PoseArray</i> on the <b>whycon/markers</b> topic (<b>ros2 topic echo /whycon/markers</b>). They are in metres relative to the camera, with x forward (along the optical axis), y left and z up; the header (including frame_id) is copied from the image and the orientation is not estimated.
 
 #### Setting up the coordinate system
 

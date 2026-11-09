@@ -188,7 +188,7 @@ void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg)
 		if (currentSegmentArray[i].valid == false) break;		//does not make sense to search for more patterns if the last one was not found
 	}
 
-	//perform transformations from camera to world coordinates
+	//calculate marker positions in camera coordinates
 	geometry_msgs::msg::PoseArray poses;
 	poses.header = msg->header;
 	for (int i = 0;i<numBots;i++){
@@ -197,15 +197,12 @@ void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg)
 			numFound++;
 			if (currentSegmentArray[i].x == lastSegmentArray[i].x) numStatic++;
 
+			//camera-centric position: x forward (optical axis), y left, z up
 			geometry_msgs::msg::Pose pose;
 			pose.position.x = objectArray[i].x;
 			pose.position.y = objectArray[i].y;
 			pose.position.z = objectArray[i].z;
 			pose.orientation.w = 1.0;
-			if (trans->transformType == TRANSFORM_2D){
-				pose.orientation.z = sin(objectArray[i].yaw/2);
-				pose.orientation.w = cos(objectArray[i].yaw/2);
-			}
 			poses.poses.push_back(pose);
 		}
 	}
